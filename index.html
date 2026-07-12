@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Massacreur de Texte Sécurisé</title>
+    <title>Exercice d'Orthographe avec IA</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -23,29 +23,29 @@
             color: #7f8c8d;
             margin-bottom: 30px;
         }
-        .container {
-            display: block;
-        }
         .block {
-            margin-bottom: 20px;
+            margin-bottom: 25px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
         textarea {
             width: 100%;
-            height: 150px;
-            padding: 15px;
+            height: 120px;
+            padding: 12px;
             border: 2px solid #bdc3c7;
-            border-radius: 8px;
+            border-radius: 6px;
             font-size: 16px;
             resize: vertical;
             box-sizing: border-box;
-            transition: border-color 0.3s;
+            font-family: inherit;
         }
         textarea:focus {
             border-color: #3498db;
             outline: none;
         }
         button {
-            background-color: #e74c3c;
             color: white;
             border: none;
             padding: 14px 20px;
@@ -55,26 +55,27 @@
             cursor: pointer;
             width: 100%;
             transition: background 0.2s;
-            margin-bottom: 25px;
+            margin-top: 10px;
         }
-        button:hover {
-            background-color: #c0392b;
-        }
+        .btn-generate { background-color: #e74c3c; }
+        .btn-generate:hover { background-color: #c0392b; }
+        .btn-verify { background-color: #2ecc71; }
+        .btn-verify:hover { background-color: #27ae60; }
+        
         button:disabled {
             background-color: #bdc3c7;
             cursor: not-allowed;
         }
-        .output-box {
+        .text-display {
             width: 100%;
-            min-height: 150px;
-            padding: 15px;
-            background-color: #fff;
+            min-height: 80px;
+            padding: 12px;
+            background-color: #f8f9fa;
             border: 2px dashed #e74c3c;
-            border-radius: 8px;
+            border-radius: 6px;
             font-size: 16px;
             box-sizing: border-box;
             white-space: pre-wrap;
-            word-wrap: break-word;
         }
         label {
             font-weight: bold;
@@ -86,79 +87,133 @@
             font-style: italic;
             color: #7f8c8d;
             text-align: center;
-            margin-top: -15px;
-            margin-bottom: 15px;
+            margin-top: 5px;
         }
+        .hidden { display: none; }
+        
+        .score-box {
+            text-align: center;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .score-good { background-color: #d4edda; color: #155724; border: 2px solid #c3e6cb; }
+        .score-bad { background-color: #f8d7da; color: #721c24; border: 2px solid #f5c6cb; }
     </style>
 </head>
 <body>
 
-    <h1>Le "Massacreur" de Texte par IA</h1>
-    <p class="subtitle">Propulsé de manière sécurisée par Mistral AI & Netlify</p>
+    <h1>Dictée IA & Correction Automatique</h1>
+    <p class="subtitle">Génère des fautes réalistes, corrige-les et obtiens ton score !</p>
 
-    <div class="container">
-        <div class="block">
-            <label for="inputText">Texte d'origine (parfaitement écrit) :</label>
-            <textarea id="inputText" placeholder="Colle ton texte impeccable ici..."></textarea>
-        </div>
-
-        <button id="submitBtn">Massacrer le texte avec l'IA</button>
+    <div class="block">
+        <label for="inputText">1. Colle ton texte d'origine parfait (sans aucune faute) :</label>
+        <textarea id="inputText" placeholder="Écris ou colle ton texte parfait ici..."></textarea>
+        <button id="submitBtn" class="btn-generate">Générer les fautes avec Mistral AI</button>
         <div id="statusMessage" class="status"></div>
+    </div>
+
+    <div id="gameZone" class="hidden">
+        <div class="block">
+            <label>2. Voici le texte saboté par l'IA (corrige ces fautes) :</label>
+            <div id="outputText" class="text-display"></div>
+        </div>
 
         <div class="block">
-            <label>Texte transformé (bourré de fautes) :</label>
-            <div id="outputText" class="output-box">Le résultat apparaîtra ici...</div>
+            <label for="userCorrection">3. Écris ta correction ici :</label>
+            <textarea id="userCorrection" placeholder="Recopie ou corrige le texte pour qu'il redevienne parfait..."></textarea>
+            <button id="verifyBtn" class="btn-verify">Vérifier ma correction</button>
         </div>
+    </div>
+
+    <div id="resultZone" class="hidden block">
+        <label>Résultat de ton exercice :</label>
+        <div id="scoreDisplay" class="score-box"></div>
     </div>
 
     <script>
         const inputText = document.getElementById('inputText');
         const outputText = document.getElementById('outputText');
+        const userCorrection = document.getElementById('userCorrection');
         const submitBtn = document.getElementById('submitBtn');
+        const verifyBtn = document.getElementById('verifyBtn');
         const statusMessage = document.getElementById('statusMessage');
+        
+        const gameZone = document.getElementById('gameZone');
+        const resultZone = document.getElementById('resultZone');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+
+        let texteOriginalParfait = "";
 
         submitBtn.addEventListener('click', async () => {
             const textToTransform = inputText.value.trim();
+            if (!textToTransform) return alert("Ajoute d'abord du texte.");
 
-            if (!textToTransform) {
-                alert("Erreur : Ajoute d'abord du texte à modifier.");
-                return;
-            }
-
+            texteOriginalParfait = textToTransform;
             submitBtn.disabled = true;
-            statusMessage.innerText = "L'IA de Mistral bousille ton texte en toute sécurité...";
-            outputText.innerText = "Chargement...";
+            statusMessage.innerText = "L'IA introduit des fautes réalistes sans toucher aux mots...";
 
             try {
-                // On appelle la fonction de l'API Netlify (sans lui montrer de clé)
                 const response = await fetch('/api/transform', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ text: textToTransform })
                 });
 
-                if (!response.ok) {
-                    throw new Error(`Erreur serveur (${response.status})`);
-                }
-
+                if (!response.ok) throw new Error(`Erreur serveur (${response.status})`);
                 const data = await response.json();
-                
-                if (data.error) {
-                    throw new Error(data.error);
-                }
+                if (data.error) throw new Error(data.error);
 
                 outputText.innerText = data.result;
-                statusMessage.innerText = "Traitement réussi !";
-
+                gameZone.classList.remove('hidden');
+                resultZone.classList.add('hidden');
+                userCorrection.value = ""; 
+                statusMessage.innerText = "À toi de corriger !";
             } catch (error) {
-                console.error(error);
-                outputText.innerText = "Une erreur est survenue...";
                 statusMessage.innerText = `Erreur : ${error.message}`;
             } finally {
                 submitBtn.disabled = false;
             }
+        });
+
+        verifyBtn.addEventListener('click', () => {
+            const correctionUtilisateur = userCorrection.value.trim();
+            if (!correctionUtilisateur) return alert("Tu n'as rien écrit dans ta correction !");
+
+            const nettoyerMots = (texte) => {
+                return texte.toLowerCase()
+                            .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, " ")
+                            .split(/\s+/)
+                            .filter(mot => mot.length > 0);
+            };
+
+            const motsParfaits = nettoyerMots(texteOriginalParfait);
+            const motsUtilisateur = nettoyerMots(correctionUtilisateur);
+
+            if (motsParfaits.length === 0) return;
+
+            let motsCorrects = 0;
+
+            motsParfaits.forEach((motAttendu, index) => {
+                if (motsUtilisateur[index] === motAttendu) {
+                    motsCorrects++;
+                }
+            });
+
+            const noteBrute = (motsCorrects / motsParfaits.length) * 10;
+            const noteFinale = Math.round(noteBrute * 10) / 10;
+
+            resultZone.classList.remove('hidden');
+            scoreDisplay.className = "score-box " + (noteFinale >= 7 ? "score-good" : "score-bad");
+            
+            scoreDisplay.innerHTML = `Note : ${noteFinale} / 10 <br>
+            <span style="font-size: 15px; font-weight: normal;">
+                Tu as correctement orthographié ${motsCorrects} mots sur les ${motsParfaits.length} mots du texte.
+            </span>`;
+            
+            resultZone.scrollIntoView({ behavior: 'smooth' });
         });
     </script>
 </body>
