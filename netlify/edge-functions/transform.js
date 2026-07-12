@@ -1,5 +1,4 @@
 export default async (request) => {
-  // On accepte uniquement les requêtes POST
   if (request.method !== "POST") {
     return new Response(JSON.stringify({ error: "Méthode non autorisée" }), {
       status: 405,
@@ -9,8 +8,6 @@ export default async (request) => {
 
   try {
     const { text } = await request.json();
-    
-    // Récupération sécurisée de la variable d'environnement Netlify
     const apiKey = Deno.env.get("MISTRAL_API_KEY");
 
     if (!apiKey) {
@@ -20,7 +17,6 @@ export default async (request) => {
       });
     }
 
-    // Appel direct à l'API Mistral
     const response = await fetch("https://api.mistral.ai/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -32,14 +28,24 @@ export default async (request) => {
         messages: [
           {
             role: "system",
-            content: "Tu es un assistant chargé de réécrire le texte fourni par l'utilisateur en y ajoutant de nombreuses fautes d'orthographe, de grammaire et de conjugaison réalistes en français (erreurs d'accords, confusion é/er/ez, consonnes doubles sautées, fautes phonétiques). Le texte doit rester lisible mais donner une impression de très faibles compétences en français écrit. Ne réponds QUE le texte modifié, sans aucune formule de politesse, introduction ou blabla."
+            content: `Tu es un outil de modification de texte strict. Ton but unique est d'ajouter des fautes de français courantes et réalistes.
+
+RÈGLES ABSOLUES :
+1. Tu dois CONSERVER EXACTEMENT les mêmes mots, la même structure de phrase et le même ordre.
+2. Interdiction totale d'inventer des mots absurdes, de reformuler ou de remplacer par des synonymes. Le vocabulaire reste inchangé.
+3. Applique seulement ces types d'erreurs humaines :
+   - Orthographe (oublier une lettre double, inverser discrètement 2 lettres, cion au lieu de tion).
+   - Conjugaison (mélanger é, er, ez, ait, ent).
+   - Grammaire / Accords (oublier le s du pluriel, rater l'accord d'un participe, confondre a/à ou ces/ses).
+
+Renvoie UNIQUEMENT le texte modifié, sans blabla.`
           },
           {
             role: "user",
             content: text
           }
         ],
-        temperature: 0.7
+        temperature: 0.2
       })
     });
 
@@ -59,5 +65,4 @@ export default async (request) => {
   }
 };
 
-// Configuration de la route d'API pour Netlify
 export const config = { path: "/api/transform" };
