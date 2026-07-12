@@ -33,7 +33,7 @@ export default async (req, context) => {
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: 'mistral-large-latest',
+        model: 'mistral-small-latest',
         messages: [{ role: 'user', content: prompt }],
         max_tokens: 1000
       })
