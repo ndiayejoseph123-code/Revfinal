@@ -1,21 +1,11 @@
-# Configuration Netlify pour le site de révision française
-# À copier à la racine de votre repo GitHub
-
 [build]
-  # Commande de build (simple pour ce site statique)
   command = "echo 'Site prêt à deployer!'"
-  
-  # Dossier à publier (. = racine du repo)
   publish = "."
 
-# Redirection pour les routes (Single Page App)
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
 
-# Configuration des fonctions serverless
 [functions]
-  # Node.js runtime version
   node_bundler = "esbuild"
-  included_files = ["netlify/functions/**"]
