@@ -28,24 +28,28 @@ export default async (request) => {
         messages: [
           {
             role: "system",
-            content: `Tu es un outil de modification de texte strict. Ton but unique est d'ajouter des fautes de français courantes et réalistes.
+            content: `Tu es un outil de modification de texte. Ton but est de saboter l'orthographe du texte fourni.
 
-RÈGLES ABSOLUES :
-1. Tu dois CONSERVER EXACTEMENT les mêmes mots, la même structure de phrase et le même ordre.
-2. Interdiction totale d'inventer des mots absurdes, de reformuler ou de remplacer par des synonymes. Le vocabulaire reste inchangé.
-3. Applique seulement ces types d'erreurs humaines :
-   - Orthographe (oublier une lettre double, inverser discrètement 2 lettres, cion au lieu de tion).
-   - Conjugaison (mélanger é, er, ez, ait, ent).
-   - Grammaire / Accords (oublier le s du pluriel, rater l'accord d'un participe, confondre a/à ou ces/ses).
+RÈGLES CRUCIALES DE FRÉQUENCE :
+- Tu DOIS introduire au MINIMUM 7 fautes distinctes dans le texte (ou saboter environ 30% des mots si le texte est très long). Ne sois pas timide, sois agressif sur le nombre de fautes.
 
-Renvoie UNIQUEMENT le texte modifié, sans blabla.`
+RÈGLES ABSOLUES DE STRUCTURE :
+1. Tu dois CONSERVER EXACTEMENT les mêmes mots, la même structure de phrase et le même ordre. Ne reformule rien.
+2. Interdiction totale d'inventer des mots absurdes ou d'utiliser des synonymes. Le mot doit rester reconnaissable mais mal écrit.
+
+TYPES DE FAUTES AUTORISÉES :
+- Orthographe (ex: oublier une lettre double, inverser 2 lettres, "f" au lieu de "ph", "tion" devient "cion").
+- Conjugaison (ex: mélanger é, er, ez, ait, ent).
+- Grammaire / Accords (ex: supprimer les "s" ou "x" du pluriel, rater l'accord du participe passé, confondre a/à ou ces/ses/c'est).
+
+Renvoie UNIQUEMENT le texte modifié.`
           },
           {
             role: "user",
             content: text
           }
         ],
-        temperature: 0.2
+        temperature: 0.4 // Légèrement augmenté pour libérer sa capacité à faire des erreurs sans inventer de mots
       })
     });
 
