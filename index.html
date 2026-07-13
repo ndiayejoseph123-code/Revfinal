@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exercice d'Orthographe avec IA</title>
+    <title>Générateur de Fautes & Analyse</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            max-width: 800px;
+            max-width: 900px;
             margin: 40px auto;
             padding: 20px;
             background-color: #f5f7fb;
@@ -28,11 +28,11 @@
             background: white;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
         }
         textarea {
             width: 100%;
-            height: 120px;
+            height: 140px;
             padding: 12px;
             border: 2px solid #bdc3c7;
             border-radius: 6px;
@@ -59,8 +59,8 @@
         }
         .btn-generate { background-color: #e74c3c; }
         .btn-generate:hover { background-color: #c0392b; }
-        .btn-verify { background-color: #2ecc71; }
-        .btn-verify:hover { background-color: #27ae60; }
+        .btn-show-correction { background-color: #3498db; width: 100%; }
+        .btn-show-correction:hover { background-color: #2980b9; }
         
         button:disabled {
             background-color: #bdc3c7;
@@ -68,7 +68,7 @@
         }
         .text-display {
             width: 100%;
-            min-height: 80px;
+            min-height: 100px;
             padding: 12px;
             background-color: #f8f9fa;
             border: 2px dashed #e74c3c;
@@ -91,69 +91,91 @@
         }
         .hidden { display: none; }
         
-        .score-box {
-            text-align: center;
-            padding: 20px;
-            border-radius: 8px;
-            margin-top: 20px;
-            font-size: 20px;
+        /* Styles de l'analyse comparative */
+        .word-list {
+            list-style-type: none;
+            padding: 0;
+            margin-top: 15px;
+        }
+        .word-list li {
+            background: #fdf2f2;
+            border-left: 5px solid #e74c3c;
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            border-radius: 0 4px 4px 0;
+            font-size: 15px;
+        }
+        .correct-word {
+            color: #27ae60;
             font-weight: bold;
         }
-        .score-good { background-color: #d4edda; color: #155724; border: 2px solid #c3e6cb; }
-        .score-bad { background-color: #f8d7da; color: #721c24; border: 2px solid #f5c6cb; }
+        .wrong-word {
+            color: #c0392b;
+            font-weight: bold;
+            text-decoration: line-through;
+        }
     </style>
 </head>
 <body>
 
-    <h1>Dictée IA & Correction Automatique</h1>
-    <p class="subtitle">Génère des fautes réalistes, corrige-les et obtiens ton score !</p>
+    <h1>Générateur de Fautes & Correction Automatique</h1>
+    <p class="subtitle">Colle un texte propre : l'IA génère les fautes et cache la correction jusqu'à ton clic.</p>
 
+    <!-- ÉTAPE 1 : Saisie initiale -->
     <div class="block">
-        <label for="inputText">1. Colle ton texte d'origine parfait (sans aucune faute) :</label>
-        <textarea id="inputText" placeholder="Écris ou colle ton texte parfait ici..."></textarea>
-        <button id="submitBtn" class="btn-generate">Générer les fautes avec Mistral AI</button>
+        <label for="inputText">1. Colle ton texte d'origine (Sans fautes) :</label>
+        <textarea id="inputText" placeholder="Colle ton texte impeccable ici..."></textarea>
+        <button id="submitBtn" class="btn-generate">Générer les fautes avec l'IA</button>
         <div id="statusMessage" class="status"></div>
     </div>
 
-    <div id="gameZone" class="hidden">
+    <!-- ÉTAPE 2 : Rendu du texte avec fautes -->
+    <div id="resultZone" class="hidden">
         <div class="block">
-            <label>2. Voici le texte saboté par l'IA (corrige ces fautes) :</label>
+            <label>2. Texte avec fautes (Généré par Mistral AI) :</label>
             <div id="outputText" class="text-display"></div>
-        </div>
-
-        <div class="block">
-            <label for="userCorrection">3. Écris ta correction ici :</label>
-            <textarea id="userCorrection" placeholder="Recopie ou corrige le texte pour qu'il redevienne parfait..."></textarea>
-            <button id="verifyBtn" class="btn-verify">Vérifier ma correction</button>
+            <button id="showCorrectionBtn" class="btn-show-correction">Voir le corrigé</button>
         </div>
     </div>
 
-    <div id="resultZone" class="hidden block">
-        <label>Résultat de ton exercice :</label>
-        <div id="scoreDisplay" class="score-box"></div>
+    <!-- ÉTAPE 3 : Analyse comparative masquée -->
+    <div id="correctionZone" class="hidden block">
+        <h2>🔍 Liste des modifications / erreurs introduites :</h2>
+        <div id="comparisonDisplay"></div>
     </div>
 
     <script>
         const inputText = document.getElementById('inputText');
         const outputText = document.getElementById('outputText');
-        const userCorrection = document.getElementById('userCorrection');
         const submitBtn = document.getElementById('submitBtn');
-        const verifyBtn = document.getElementById('verifyBtn');
+        const showCorrectionBtn = document.getElementById('showCorrectionBtn');
         const statusMessage = document.getElementById('statusMessage');
         
-        const gameZone = document.getElementById('gameZone');
         const resultZone = document.getElementById('resultZone');
-        const scoreDisplay = document.getElementById('scoreDisplay');
+        const correctionZone = document.getElementById('correctionZone');
+        const comparisonDisplay = document.getElementById('comparisonDisplay');
 
-        let texteOriginalParfait = "";
+        let texteOriginalGlobal = "";
+        let texteModifieGlobal = "";
 
+        // Fonction de nettoyage des mots
+        function nettoyerEtDecouper(texte) {
+            return texte
+                .toLowerCase()
+                .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"«»']/g, " ")
+                .split(/\s+/)
+                .filter(mot => mot.length > 0);
+        }
+
+        // Étape 1 : Appel à l'IA
         submitBtn.addEventListener('click', async () => {
             const textToTransform = inputText.value.trim();
-            if (!textToTransform) return alert("Ajoute d'abord du texte.");
+            if (!textToTransform) return alert("Veuillez ajouter du texte.");
 
-            texteOriginalParfait = textToTransform;
             submitBtn.disabled = true;
-            statusMessage.innerText = "L'IA introduit des fautes réalistes sans toucher aux mots...";
+            statusMessage.innerText = "L'IA sabote le texte...";
+            resultZone.classList.add('hidden');
+            correctionZone.classList.add('hidden');
 
             try {
                 const response = await fetch('/api/transform', {
@@ -166,11 +188,16 @@
                 const data = await response.json();
                 if (data.error) throw new Error(data.error);
 
-                outputText.innerText = data.result;
-                gameZone.classList.remove('hidden');
-                resultZone.classList.add('hidden');
-                userCorrection.value = ""; 
-                statusMessage.innerText = "À toi de corriger !";
+                // Sauvegarde pour l'analyse
+                texteOriginalGlobal = textToTransform;
+                texteModifieGlobal = data.result;
+
+                // Affichage du texte modifié uniquement
+                outputText.innerText = texteModifieGlobal;
+                resultZone.classList.remove('hidden');
+                statusMessage.innerText = "Texte généré !";
+                resultZone.scrollIntoView({ behavior: 'smooth' });
+
             } catch (error) {
                 statusMessage.innerText = `Erreur : ${error.message}`;
             } finally {
@@ -178,43 +205,53 @@
             }
         });
 
-        verifyBtn.addEventListener('click', () => {
-            const correctionUtilisateur = userCorrection.value.trim();
-            if (!correctionUtilisateur) return alert("Tu n'as rien écrit dans ta correction !");
-
-            const nettoyerMots = (texte) => {
-                return texte.toLowerCase()
-                            .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, " ")
-                            .split(/\s+/)
-                            .filter(mot => mot.length > 0);
-            };
-
-            const motsParfaits = nettoyerMots(texteOriginalParfait);
-            const motsUtilisateur = nettoyerMots(correctionUtilisateur);
-
-            if (motsParfaits.length === 0) return;
-
-            let motsCorrects = 0;
-
-            motsParfaits.forEach((motAttendu, index) => {
-                if (motsUtilisateur[index] === motAttendu) {
-                    motsCorrects++;
-                }
-            });
-
-            const noteBrute = (motsCorrects / motsParfaits.length) * 10;
-            const noteFinale = Math.round(noteBrute * 10) / 10;
-
-            resultZone.classList.remove('hidden');
-            scoreDisplay.className = "score-box " + (noteFinale >= 7 ? "score-good" : "score-bad");
-            
-            scoreDisplay.innerHTML = `Note : ${noteFinale} / 10 <br>
-            <span style="font-size: 15px; font-weight: normal;">
-                Tu as correctement orthographié ${motsCorrects} mots sur les ${motsParfaits.length} mots du texte.
-            </span>`;
-            
-            resultZone.scrollIntoView({ behavior: 'smooth' });
+        // Étape 2 : Clic sur "Voir le corrigé"
+        showCorrectionBtn.addEventListener('click', () => {
+            genererComparaison(texteOriginalGlobal, texteModifieGlobal);
+            correctionZone.classList.remove('hidden');
+            correctionZone.scrollIntoView({ behavior: 'smooth' });
         });
+
+        function genererComparaison(original, modifie) {
+            const motsCorrects = nettoyerEtDecouper(original);
+            const motsErrones = nettoyerEtDecouper(modifie);
+
+            let erreurs = [];
+            const longueurMax = Math.max(motsCorrects.length, motsErrones.length);
+            
+            for (let i = 0; i < longueurMax; i++) {
+                const motAttendu = motsCorrects[i] || "(supprimé)";
+                const motRecu = motsErrones[i] || "(ajouté)";
+                
+                if (motAttendu !== motRecu) {
+                    erreurs.push({
+                        index: i + 1,
+                        attendu: motAttendu,
+                        recu: motRecu
+                    });
+                }
+            }
+
+            // Génération du rendu HTML[cite: 1]
+            if (erreurs.length === 0) {
+                comparisonDisplay.innerHTML = '<p style="color: #27ae60; font-weight: bold;">⚠️ L\'IA n\'a introduit aucune faute.</p>';
+            } else {
+                let htmlResultat = `<p>L'IA a modifié <strong>${erreurs.length}</strong> mot(s) :</p>`;
+                htmlResultat += '<ul class="word-list">';
+                
+                erreurs.forEach(erreur => {
+                    htmlResultat += `
+                        <li>
+                            <strong>Mot n°${erreur.index} :</strong> 
+                            L'IA a écrit <span class="wrong-word">"${erreur.recu}"</span> 
+                            au lieu de la référence <span class="correct-word">"${erreur.attendu}"</span>
+                        </li>`;
+                });
+                
+                htmlResultat += '</ul>';
+                comparisonDisplay.innerHTML = htmlResultat;
+            }
+        }
     </script>
 </body>
 </html>
